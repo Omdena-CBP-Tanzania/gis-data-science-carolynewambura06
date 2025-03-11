@@ -7,22 +7,39 @@ jobs:
     name: Autograding
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@4
-      - uses: actions/setup-python@v4
+      # Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3  # Use valid version
+
+      # Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
           python-version: '3.9'
+
+      # Install dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install geopandas matplotlib numpy pandas seaborn folium mapclassify xarray rasterio contextily nbformat nbconvert jupyter_client
+
+      # Prepare for testing
       - name: Prepare for testing
         run: |
-          # Convert student notebook to Python script
-          cp solution.ipynb student_submission.ipynb
+          # Convert student notebook to Python script (if needed)
+          jupyter nbconvert --to script student_submission.ipynb
+
+      # Run tests
       - name: Run tests
         run: |
           python .github/classroom/autograder_test.py
+
+      # Feedback
       - name: Feedback
         if: always()
-        run: cat .github/classroom/test_results.txt
-      - uses: education/autograding@v3
+        run: |
+          cat .github/classroom/test_results.txt
+
+      # Autograding
+      - name: Autograding
+        uses: education/autograding@v1  # Use valid version
