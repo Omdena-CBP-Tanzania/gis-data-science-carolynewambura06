@@ -12,6 +12,7 @@ import folium
 import re
 import io
 import sys
+from shapely.geometry import box
 from unittest.mock import patch
 from IPython.display import display
 
@@ -159,7 +160,7 @@ class TestGISAssignment(unittest.TestCase):
         # Create test data
         test_gdf1 = gpd.GeoDataFrame(
             {'col1': [1]}, 
-            geometry=[gpd.box(0, 0, 1, 1)],
+            geometry=[box(0, 0, 1, 1)],
             crs="EPSG:4326"
         )
         test_gdf2 = test_gdf1.to_crs(epsg=3857)
@@ -169,4 +170,66 @@ class TestGISAssignment(unittest.TestCase):
         
         # Check if it returns a dictionary
         self.assertIsInstance(result, dict, 
-                
+                         "compare_projections should return a dictionary")
+    
+    # Check if the dictionary contains keys for both GeoDataFrames
+        self.assertIn('gdf1_crs', result, "Result should include 'gdf1_crs'")
+        self.assertIn('gdf2_crs', result, "Result should include 'gdf2_crs'")
+        self.assertIn('gdf1_bounds', result, "Result should include 'gdf1_bounds'")
+        self.assertIn('gdf2_bounds', result, "Result should include 'gdf2_bounds'")
+    
+    # Check if CRS and bounds are correctly reported
+        self.assertEqual(result['gdf1_crs'], test_gdf1.crs, 
+                    "CRS of gdf1 is incorrect")
+        self.assertEqual(result['gdf2_crs'], test_gdf2.crs, 
+                    "CRS of gdf2 is incorrect")
+    
+    # Check if bounds are different (due to reprojection)
+        self.assertNotEqual(result['gdf1_bounds'], result['gdf2_bounds'], 
+                      "Bounds should differ after reprojection")
+        
+    def test_06_regional_stats(self):
+        """Test if regional statistics are calculated correctly."""
+        self.assertIn('regional_stats', self.globals, 
+                 "Variable 'regional_stats' not found")
+    
+        regional_stats = self.globals['regional_stats']
+    
+    # Check if the result is a DataFrame
+        self.assertIsInstance(regional_stats, pd.DataFrame, 
+                         "regional_stats should be a DataFrame")
+    
+    # Check required statistics (mean, median, std)
+        required_stats = ['mean', 'median', 'std']
+        for stat in required_stats:
+           for col in ['ANNUAL_AVG_TEMP_C', 'ANNUAL_PRECIP_MM', 'ANNUAL_DROUGHT_INDEX']:
+            self.assertIn(f'{col}_{stat}', regional_stats.columns, 
+                         f"Column '{col}_{stat}' missing in regional_stats")
+    def test_07_plot_variations(self):
+        """Test if the plot is generated correctly."""
+        self.assertIn('variations_plot', self.globals, 
+                 "Variable 'variations_plot' not found")
+    
+        variations_plot = self.globals['variations_plot']
+    
+        # Check if it's a matplotlib Figure
+        self.assertIsInstance(variations_plot, plt.Figure, 
+                         "variations_plot should be a matplotlib Figure")
+    
+        # Check plot title
+        ax = variations_plot.gca()
+        self.assertEqual(ax.get_title(), 'Regional Climate Variations in Tanzania', 
+                    "Plot title is incorrect")
+    
+        # Check legend labels
+        legend_labels = [text.get_text() for text in ax.get_legend().get_texts()]
+        expected_labels = [
+        'ANNUAL_AVG_TEMP_C (Mean)', 
+        'ANNUAL_PRECIP_MM (Mean)', 
+        'ANNUAL_DROUGHT_INDEX (Mean)'
+        ]
+        for label in expected_labels:
+            self.assertIn(label, legend_labels, 
+                     f"Legend label '{label}' missing")   
+
+    
